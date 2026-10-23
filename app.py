@@ -7,7 +7,6 @@ import requests
 
 app = Flask(__name__)
 
-# مسیر دقیق پوشه‌ای که فایل app.py داخلش قرار داره
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ================== تنظیمات گیت‌هاب ==================
@@ -117,14 +116,15 @@ HTML_TEMPLATE = """
 """
 
 def get_github_json(file_path):
-    """فایل JSON رو از گیت‌هاب می‌خونه."""
-    url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/{GITHUB_BRANCH}/{file_path}"
+    """فایل JSON رو از API گیت‌هاب می‌خونه (روش مطمئن‌تر)."""
+    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{file_path}"
+    headers = {"Accept": "application/vnd.github.v3.raw"}
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
         else:
-            print(f"Error fetching {file_path} from GitHub: {response.status_code}")
+            print(f"Error fetching {file_path} from GitHub API: {response.status_code}")
             return []
     except Exception as e:
         print(f"Exception fetching {file_path}: {e}")
@@ -157,7 +157,7 @@ def index():
         
         if os.path.exists(output_json): os.remove(output_json)
         try:
-            subprocess.run([sys.executable, python_script, query, "digikala,torob,choobro,basalam,technolayef,khanoumi", output_json], check=True, timeout=60)
+            subprocess.run([sys.executable, python_script, query, "digikala,torob,choobro,basalam,technolife,khanoumi", output_json], check=True, timeout=60)
             if os.path.exists(output_json):
                 with open(output_json, 'r', encoding='utf-8') as f:
                     results = json.load(f)
