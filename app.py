@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import requests
+import time
 
 app = Flask(__name__)
 
@@ -13,7 +14,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 GITHUB_USERNAME = "bahmanjahanshahi-prog"
 GITHUB_REPO = "vitrin_clean"
 GITHUB_BRANCH = "main"
-# توکن از متغیر محیطی خونده می‌شه (نه از توی کد)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 # ======================================================
 
@@ -26,31 +26,193 @@ HTML_TEMPLATE = """
     <title>ویترین | بهترین قیمت‌ها</title>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; background-color: #f7fafc; color: #333; margin: 0; padding: 0; }
-        .header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            background-color: var(--bg-color); 
+            background-image: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 0; 
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header { 
+            background: rgba(15, 23, 42, 0.8); 
+            backdrop-filter: blur(12px); 
+            border-bottom: 1px solid var(--border);
+            padding: 20px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+        }
         .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-text { font-size: 28px; font-weight: 700; color: #1a365d; margin: 0; letter-spacing: -1px; }
-        .slogan-text { font-size: 13px; color: #718096; font-weight: 300; border-right: 1px solid #e2e8f0; padding-right: 15px; }
-        .search-container { width: 100%; max-width: 400px; position: relative; }
-        .search-input { width: 100%; padding: 10px 15px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 20px; box-sizing: border-box; font-family: inherit; transition: all 0.3s ease; outline: none; background: #f7fafc; }
-        .search-input:focus { border-color: #3182ce; background: #fff; }
-        .search-btn { position: absolute; left: 5px; top: 5px; bottom: 5px; background-color: #3182ce; color: white; border: none; border-radius: 15px; padding: 0 15px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.3s; }
-        .search-btn:hover { background-color: #2b6cb0; }
-        .feed-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.3s, box-shadow 0.3s; margin-bottom: 20px; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card-image { width: 100%; height: 220px; object-fit: contain; background: #f7fafc; padding: 20px; box-sizing: border-box; }
-        .card-content { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
-        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #2d3748; line-height: 1.6; height: 44px; overflow: hidden; }
+        .logo-text { font-size: 28px; font-weight: 700; color: #fff; margin: 0; letter-spacing: -1px; }
+        .slogan-text { font-size: 13px; color: var(--text-sub); font-weight: 300; border-right: 1px solid var(--border); padding-right: 15px; }
+        
+        /* Search */
+        .search-container { width: 100%; max-width: 500px; position: relative; }
+        .search-input { 
+            width: 100%; 
+            padding: 12px 20px; 
+            font-size: 14px; 
+            border: 1px solid var(--border); 
+            border-radius: 30px; 
+            box-sizing: border-box; 
+            font-family: inherit; 
+            outline: none; 
+            background: rgba(255,255,255,0.05); 
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .search-input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+        .search-btn { 
+            position: absolute; 
+            left: 5px; 
+            top: 5px; 
+            bottom: 5px; 
+            background-color: var(--accent); 
+            color: #0f172a; 
+            border: none; 
+            border-radius: 25px; 
+            padding: 0 20px; 
+            font-family: inherit; 
+            font-weight: bold;
+            cursor: pointer; 
+            transition: background 0.3s; 
+        }
+        .search-btn:hover { background-color: var(--accent-hover); }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            position: relative;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+        .hero h2 { font-size: 36px; margin-bottom: 10px; font-weight: 700; }
+        .hero p { font-size: 16px; color: var(--text-sub); margin-bottom: 30px; }
+
+        /* Main Layout */
+        .feed-container { max-width: 1300px; margin: 40px auto; padding: 0 20px; }
+        
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .filter-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--accent);
+            color: #0f172a;
+            border-color: var(--accent);
+        }
+
+        /* Grid */
+        .grid-layout { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 25px; 
+        }
+        
+        /* Card */
+        .card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            transition: transform 0.3s, box-shadow 0.3s; 
+        }
+        .card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3); 
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        .card-image { 
+            width: 100%; 
+            height: 200px; 
+            object-fit: contain; 
+            background: rgba(0,0,0,0.2); 
+            padding: 20px; 
+            box-sizing: border-box; 
+        }
+        .card-content { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+        .card-title { font-size: 15px; font-weight: 700; margin-bottom: 15px; color: var(--text-main); line-height: 1.6; height: 48px; overflow: hidden; }
         .card-bottom { margin-top: auto; }
         .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-price { font-size: 18px; font-weight: 700; color: #d32f2f; }
-        .card-rating { font-size: 13px; color: #ff9800; font-weight: bold; background: #fffaf0; padding: 4px 8px; border-radius: 8px; }
-        .card-btn { background: #3182ce; color: white; padding: 12px 0; border-radius: 10px; text-decoration: none; text-align: center; font-weight: 700; font-size: 14px; transition: 0.3s; width: 100%; display: block; }
-        .card-btn:hover { background: #2b6cb0; }
-        .section-title { font-size: 22px; color: #2d3748; margin: 30px 0 20px; border-right: 4px solid #3182ce; padding-right: 10px; font-weight: 700; }
-        .error-msg { color: #e53e3e; text-align: center; font-weight: bold; padding: 20px; background: #fff5f5; border-radius: 8px; margin-bottom: 20px; word-break: break-all; }
+        .card-price { font-size: 18px; font-weight: 700; color: var(--accent); }
+        .card-rating { font-size: 12px; color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.1); padding: 4px 8px; border-radius: 8px; }
+        .card-btn { 
+            background: linear-gradient(90deg, var(--accent) 0%, #818cf8 100%); 
+            color: #fff; 
+            padding: 12px 0; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            text-align: center; 
+            font-weight: 700; 
+            font-size: 14px; 
+            transition: 0.3s; 
+            width: 100%; 
+            display: block; 
+            border: none;
+        }
+        .card-btn:hover { 
+            background: linear-gradient(90deg, #818cf8 0%, var(--accent) 100%); 
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+        
+        .section-title { 
+            font-size: 24px; 
+            color: var(--text-main); 
+            margin: 0 0 25px 0; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 6px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 3px;
+        }
+        .error-msg { color: #f87171; text-align: center; font-weight: bold; padding: 20px; background: rgba(248, 113, 113, 0.1); border-radius: 12px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -65,14 +227,32 @@ HTML_TEMPLATE = """
         </form>
     </div>
 
+    {% if not query %}
+    <div class="hero">
+        <div class="hero-content">
+            <h2>به ویترین خوش آمدید</h2>
+            <p>بهترین کالاها با بهترین قیمت‌ها از منابع معتبر</p>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="feed-container">
         {% if query %}
             <div class="section-title">نتایج جستجو برای: {{ query }}</div>
+            
+            <div class="filter-bar">
+                <button class="filter-btn active">همه</button>
+                <button class="filter-btn">دیجی‌کالا</button>
+                <button class="filter-btn">باسلام</button>
+                <button class="filter-btn">تکنولایف</button>
+            </div>
+
             {% if error %}<div class="error-msg">{{ error }}</div>
             {% elif results %}
                 <div class="grid-layout">
                     {% for item in results %}
                     <div class="card">
+                        {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#475569;">بدون عکس</div>{% endif %}
                         <div class="card-content">
                             <div class="card-title">{{ item.note }}</div>
                             <div class="card-bottom">
@@ -89,13 +269,11 @@ HTML_TEMPLATE = """
             {% else %}<div class="error-msg">هیچ محصولی با این عبارت پیدا نشد.</div>{% endif %}
         {% else %}
             <div class="section-title">🔥 پیشنهادهای ویژه امروز</div>
-            
-            {% if debug_error %}
-                <div class="error-msg">خطا در خواندن از گیت‌هاب: {{ debug_error }}</div>
-            {% elif feed %}
+            {% if feed %}
             <div class="grid-layout">
                 {% for item in feed %}
                 <div class="card">
+                    {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#475569;">بدون عکس</div>{% endif %}
                     <div class="card-content">
                         <div class="card-title">{{ item.title }}</div>
                         <div class="card-bottom">
@@ -118,21 +296,34 @@ HTML_TEMPLATE = """
 </html>
 """
 
+_cache_data = None
+_cache_time = 0
+CACHE_DURATION = 300  # 5 minutes
+
 def get_github_json(file_path):
-    """فایل JSON رو از لینک خام گیت‌هاب با احراز هویت می‌خونه."""
-    url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/{GITHUB_BRANCH}/{file_path}"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "User-Agent": "Vitrin-App"
-    }
+    global _cache_data, _cache_time
+    if _cache_data is not None and (time.time() - _cache_time) < CACHE_DURATION:
+        return _cache_data, None
+    
+    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{file_path}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            return response.json(), None
+            import base64
+            content = base64.b64decode(response.json()['content']).decode('utf-8')
+            data = json.loads(content)
+            _cache_data = data
+            _cache_time = time.time()
+            return data, None
         else:
-            return [], f"Status Code: {response.status_code} - {response.text[:100]}"
+            return [], f"Status Code: {response.status_code}"
     except Exception as e:
         return [], str(e)
+
+@app.route('/health')
+def health():
+    return {"status": "ok"}, 200
 
 @app.route('/')
 def index():
