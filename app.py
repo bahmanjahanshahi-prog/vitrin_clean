@@ -13,6 +13,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 GITHUB_USERNAME = "bahmanjahanshahi-prog"
 GITHUB_REPO = "vitrin_clean"
 GITHUB_BRANCH = "main"
+GITHUB_TOKEN = "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"
 # ======================================================
 
 HTML_TEMPLATE = """
@@ -117,10 +118,14 @@ HTML_TEMPLATE = """
 """
 
 def get_github_json(file_path):
-    """فایل JSON رو از لینک خام گیت‌هاب می‌خونه (بدون محدودیت API)."""
+    """فایل JSON رو از لینک خام گیت‌هاب با احراز هویت می‌خونه."""
     url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/{GITHUB_BRANCH}/{file_path}"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "User-Agent": "Vitrin-App"
+    }
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json(), None
         else:
