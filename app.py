@@ -76,6 +76,7 @@ HTML_TEMPLATE = """
                             <div class="card-bottom">
                                 <div class="price-row">
                                     <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
+                                    {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
                                 </div>
                                 <a href="{{ item.url }}" target="_blank" class="card-btn">مشاهده و خرید</a>
                             </div>
@@ -98,6 +99,7 @@ HTML_TEMPLATE = """
                         <div class="card-bottom">
                             <div class="price-row">
                                 <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
+                                {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
                             </div>
                             <a href="{{ item.url if item.url else '#' }}" target="_blank" class="card-btn">مشاهده و خرید</a>
                         </div>
@@ -115,11 +117,10 @@ HTML_TEMPLATE = """
 """
 
 def get_github_json(file_path):
-    """فایل JSON رو از API گیت‌هاب می‌خونه و در صورت خطا، متن خطا رو برمی‌گردونه."""
-    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{file_path}"
-    headers = {"Accept": "application/vnd.github.v3.raw"}
+    """فایل JSON رو از لینک خام گیت‌هاب می‌خونه (بدون محدودیت API)."""
+    url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/{GITHUB_BRANCH}/{file_path}"
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             return response.json(), None
         else:
@@ -156,6 +157,7 @@ def index():
             feed.append({
                 "title": item.get("note", "نامشخص"),
                 "price": item.get("price", 0) or 0,
+                "rating": item.get("rating", 0) or 0,
                 "url": item.get("url", "#"),
             })
 
