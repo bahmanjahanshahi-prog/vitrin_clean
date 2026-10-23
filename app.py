@@ -48,7 +48,7 @@ HTML_TEMPLATE = """
         .card-btn { background: #3182ce; color: white; padding: 12px 0; border-radius: 10px; text-decoration: none; text-align: center; font-weight: 700; font-size: 14px; transition: 0.3s; width: 100%; display: block; }
         .card-btn:hover { background: #2b6cb0; }
         .section-title { font-size: 22px; color: #2d3748; margin: 30px 0 20px; border-right: 4px solid #3182ce; padding-right: 10px; font-weight: 700; }
-        .error-msg { color: #e53e3e; text-align: center; font-weight: bold; padding: 20px; background: #fff5f5; border-radius: 8px; margin-bottom: 20px; }
+        .error-msg { color: #e53e3e; text-align: center; font-weight: bold; padding: 20px; background: #fff5f5; border-radius: 8px; margin-bottom: 20px; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -71,13 +71,11 @@ HTML_TEMPLATE = """
                 <div class="grid-layout">
                     {% for item in results %}
                     <div class="card">
-                        {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#a0aec0;">بدون عکس</div>{% endif %}
                         <div class="card-content">
                             <div class="card-title">{{ item.note }}</div>
                             <div class="card-bottom">
                                 <div class="price-row">
                                     <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
-                                    {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
                                 </div>
                                 <a href="{{ item.url }}" target="_blank" class="card-btn">مشاهده و خرید</a>
                             </div>
@@ -88,17 +86,18 @@ HTML_TEMPLATE = """
             {% else %}<div class="error-msg">هیچ محصولی با این عبارت پیدا نشد.</div>{% endif %}
         {% else %}
             <div class="section-title">🔥 پیشنهادهای ویژه امروز</div>
-            {% if feed %}
+            
+            {% if debug_error %}
+                <div class="error-msg">خطا در خواندن از گیت‌هاب: {{ debug_error }}</div>
+            {% elif feed %}
             <div class="grid-layout">
                 {% for item in feed %}
                 <div class="card">
-                    {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#a0aec0;">بدون عکس</div>{% endif %}
                     <div class="card-content">
                         <div class="card-title">{{ item.title }}</div>
                         <div class="card-bottom">
                             <div class="price-row">
                                 <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
-                                {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
                             </div>
                             <a href="{{ item.url if item.url else '#' }}" target="_blank" class="card-btn">مشاهده و خرید</a>
                         </div>
@@ -107,7 +106,7 @@ HTML_TEMPLATE = """
                 {% endfor %}
             </div>
             {% else %}
-            <div class="error-msg">هنوز محصولی به ویترین اضافه نشده است.</div>
+            <div class="error-msg">هنوز محصولی به ویترین اضافه نشده است. (فایل main.json خالی است)</div>
             {% endif %}
         {% endif %}
     </div>
@@ -116,33 +115,17 @@ HTML_TEMPLATE = """
 """
 
 def get_github_json(file_path):
-    """فایل JSON رو از API گیت‌هاب می‌خونه (روش مطمئن‌تر)."""
+    """فایل JSON رو از API گیت‌هاب می‌خونه و در صورت خطا، متن خطا رو برمی‌گردونه."""
     url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{file_path}"
     headers = {"Accept": "application/vnd.github.v3.raw"}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
-            return response.json()
+            return response.json(), None
         else:
-            print(f"Error fetching {file_path} from GitHub API: {response.status_code}")
-            return []
+            return [], f"Status Code: {response.status_code} - {response.text[:100]}"
     except Exception as e:
-        print(f"Exception fetching {file_path}: {e}")
-        return []
-
-def get_showcase_feed():
-    """محصولات ویترین اصلی رو از گیت‌هاب می‌خونه."""
-    data = get_github_json("showcase_data/main.json")
-    feed = []
-    for item in data:
-        feed.append({
-            "title": item.get("note", "نامشخص"),
-            "price": item.get("price", 0) or 0,
-            "rating": item.get("rating", 0) or 0,
-            "url": item.get("url", "#"),
-            "image": item.get("image", ""),
-        })
-    return feed
+        return [], str(e)
 
 @app.route('/')
 def index():
@@ -150,6 +133,7 @@ def index():
     results = []
     error = None
     feed = []
+    debug_error = None
 
     if query:
         output_json = "/tmp/web_search_results.json"
@@ -167,9 +151,15 @@ def index():
         except Exception as e:
             error = f"خطا در جستجو."
     else:
-        feed = get_showcase_feed()
+        data, debug_error = get_github_json("showcase_data/main.json")
+        for item in data:
+            feed.append({
+                "title": item.get("note", "نامشخص"),
+                "price": item.get("price", 0) or 0,
+                "url": item.get("url", "#"),
+            })
 
-    return render_template_string(HTML_TEMPLATE, query=query, results=results, feed=feed, error=error)
+    return render_template_string(HTML_TEMPLATE, query=query, results=results, feed=feed, error=error, debug_error=debug_error)
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
