@@ -5,8 +5,6 @@ import os
 import sys
 
 app = Flask(__name__)
-
-# مسیر دقیق پوشه‌ای که فایل app.py داخلش قرار داره
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 HTML_TEMPLATE = """
@@ -14,45 +12,33 @@ HTML_TEMPLATE = """
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ویترین | بهترین قیمت‌ها</title>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Vazirmatn', sans-serif; background-color: #f7fafc; color: #333; margin: 0; padding: 0; }
-        .header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .header { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-text { font-size: 28px; font-weight: 700; color: #1a365d; margin: 0; letter-spacing: -1px; }
-        .slogan-text { font-size: 13px; color: #718096; font-weight: 300; border-right: 1px solid #e2e8f0; padding-right: 15px; }
+        .logo-text { font-size: 28px; font-weight: 700; color: #1a365d; margin: 0; }
         .search-container { width: 100%; max-width: 400px; position: relative; }
-        .search-input { width: 100%; padding: 10px 15px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 20px; box-sizing: border-box; font-family: inherit; transition: all 0.3s ease; outline: none; background: #f7fafc; }
-        .search-input:focus { border-color: #3182ce; background: #fff; }
-        .search-btn { position: absolute; left: 5px; top: 5px; bottom: 5px; background-color: #3182ce; color: white; border: none; border-radius: 15px; padding: 0 15px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.3s; }
-        .search-btn:hover { background-color: #2b6cb0; }
+        .search-input { width: 100%; padding: 10px 15px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 20px; box-sizing: border-box; outline: none; }
+        .search-btn { position: absolute; left: 5px; top: 5px; bottom: 5px; background-color: #3182ce; color: white; border: none; border-radius: 15px; padding: 0 15px; cursor: pointer; }
         .feed-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.3s, box-shadow 0.3s; margin-bottom: 20px; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 15px; display: flex; flex-direction: column; margin-bottom: 20px; }
         .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-        .card-image { width: 100%; height: 220px; object-fit: contain; background: #f7fafc; padding: 20px; box-sizing: border-box; }
-        .card-content { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
-        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: #2d3748; line-height: 1.6; height: 44px; overflow: hidden; }
-        .card-bottom { margin-top: auto; }
-        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; height: 44px; overflow: hidden; }
         .card-price { font-size: 18px; font-weight: 700; color: #d32f2f; }
-        .card-rating { font-size: 13px; color: #ff9800; font-weight: bold; background: #fffaf0; padding: 4px 8px; border-radius: 8px; }
-        .card-btn { background: #3182ce; color: white; padding: 12px 0; border-radius: 10px; text-decoration: none; text-align: center; font-weight: 700; font-size: 14px; transition: 0.3s; width: 100%; display: block; }
-        .card-btn:hover { background: #2b6cb0; }
-        .section-title { font-size: 22px; color: #2d3748; margin: 30px 0 20px; border-right: 4px solid #3182ce; padding-right: 10px; font-weight: 700; }
-        .error-msg { color: #e53e3e; text-align: center; font-weight: bold; padding: 20px; background: #fff5f5; border-radius: 8px; margin-bottom: 20px; }
+        .card-btn { background: #3182ce; color: white; padding: 12px 0; border-radius: 10px; text-decoration: none; text-align: center; margin-top: 10px; display: block; }
+        .section-title { font-size: 22px; color: #2d3748; margin: 30px 0 20px; border-right: 4px solid #3182ce; padding-right: 10px; }
+        .error-msg { color: #e53e3e; text-align: center; font-weight: bold; padding: 20px; background: #fff5f5; border-radius: 8px; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo-area">
             <h1 class="logo-text">ویترین</h1>
-            <div class="slogan-text">بهترین قیمت‌ها</div>
         </div>
         <form class="search-container" action="/" method="GET">
-            <input type="text" name="q" class="search-input" placeholder="جستجوی محصول در منابع مختلف..." value="{{ query }}">
+            <input type="text" name="q" class="search-input" placeholder="جستجوی محصول..." value="{{ query }}">
             <button type="submit" class="search-btn">جستجو</button>
         </form>
     </div>
@@ -60,71 +46,35 @@ HTML_TEMPLATE = """
     <div class="feed-container">
         {% if query %}
             <div class="section-title">نتایج جستجو برای: {{ query }}</div>
-            {% if error %}<div class="error-msg">{{ error }}</div>
+            {% if error %}
+                <div class="error-msg">{{ error }}</div>
             {% elif results %}
                 <div class="grid-layout">
                     {% for item in results %}
                     <div class="card">
-                        {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#a0aec0;">بدون عکس</div>{% endif %}
-                        <div class="card-content">
-                            <div class="card-title">{{ item.note }}</div>
-                            <div class="card-bottom">
-                                <div class="price-row">
-                                    <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
-                                    {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
-                                </div>
-                                <a href="{{ item.url }}" target="_blank" class="card-btn">مشاهده و خرید</a>
-                            </div>
-                        </div>
+                        <div class="card-title">{{ item.note }}</div>
+                        <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
+                        <a href="{{ item.url }}" target="_blank" class="card-btn">مشاهده و خرید</a>
                     </div>
                     {% endfor %}
                 </div>
-            {% else %}<div class="error-msg">هیچ محصولی با این عبارت پیدا نشد.</div>{% endif %}
+            {% else %}
+                <div class="error-msg">محصولی یافت نشد.</div>
+            {% endif %}
         {% else %}
-            <div class="section-title">🔥 پیشنهادهای ویژه امروز</div>
-            <div class="grid-layout">
-                {% for item in feed %}
-                <div class="card">
-                    {% if item.image %}<img src="{{ item.image }}" class="card-image" alt="عکس">{% else %}<div class="card-image" style="display:flex; align-items:center; justify-content:center; color:#a0aec0;">بدون عکس</div>{% endif %}
-                    <div class="card-content">
-                        <div class="card-title">{{ item.title }}</div>
-                        <div class="card-bottom">
-                            <div class="price-row">
-                                <div class="card-price">{{ "{:,}".format(item.price) }} تومان</div>
-                                {% if item.rating and item.rating > 0 %}<div class="card-rating">⭐ {{ item.rating }}</div>{% endif %}
-                            </div>
-                            <a href="#" class="card-btn">مشاهده و خرید</a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+            <div class="section-title">👋 به ویترین خوش آمدید</div>
+            <p style="text-align:center; color:#718096;">برای شروع، نام محصول مورد نظر خود را جستجو کنید.</p>
         {% endif %}
     </div>
 </body>
 </html>
 """
 
-def get_trending():
-    # استفاده از مسیر نسبی برای سرور
-    script = os.path.join(BASE_DIR, "test_best_sellers.py")
-    out_json = "/tmp/web_trending.json" # مسیر موقت برای سرور لینوکسی
-    if os.path.exists(out_json): os.remove(out_json)
-    try:
-        subprocess.run([sys.executable, script, out_json], check=True, timeout=40)
-        if os.path.exists(out_json):
-            with open(out_json, 'r', encoding='utf-8') as f:
-                return json.load(f)[:20]
-    except Exception as e:
-        print(f"Error: {e}")
-    return []
-
 @app.route('/')
 def index():
     query = request.args.get('q', '')
     results = []
     error = None
-    feed = []
 
     if query:
         output_json = "/tmp/web_search_results.json"
@@ -132,7 +82,8 @@ def index():
         
         if os.path.exists(output_json): os.remove(output_json)
         try:
-            subprocess.run([sys.executable, python_script, query, "digikala,torob,choobro", output_json], check=True, timeout=40)
+            # اجرای main.py با مسیر نسبی و پایتون سرور
+            subprocess.run([sys.executable, python_script, query, "digikala,torob,choobro", output_json], check=True, timeout=60)
             if os.path.exists(output_json):
                 with open(output_json, 'r', encoding='utf-8') as f:
                     results = json.load(f)
@@ -140,11 +91,9 @@ def index():
                     error = results[0]["error"]
                     results = []
         except Exception as e:
-            error = f"خطا در جستجو."
-    else:
-        feed = get_trending()
+            error = f"خطا در جستجو: {str(e)}"
 
-    return render_template_string(HTML_TEMPLATE, query=query, results=results, feed=feed, error=error)
+    return render_template_string(HTML_TEMPLATE, query=query, results=results, error=error)
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True)
