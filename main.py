@@ -23,12 +23,19 @@ CATEGORIES = {
     "mobile": ["گوشی", "phone", "mobile", "samsung", "apple", "xiaomi"],
 }
 
+# ✅ کلماتی که نباید به عنوان فیلتر متنی در نظر گرفته شوند
+STOP_WORDS = ["پرفروش", "بهترین", "ارزان‌ترین", "ارزانترین", "جدید", "ترند", "محبوب", "تخفیف", "حراج"]
+
+# ✅ تمام منابع اتاق فرمان
 ALL_SOURCES = {
     "choobro": "source_choobro",
     "torob": "source_torob",
     "shahreyaragh": "source_shahreyaragh",
     "emalls": "source_emalls",
-    "digikala": "source_digikala"
+    "digikala": "source_digikala",
+    "basalam": "source_basalam",
+    "technolife": "source_technolife",
+    "khanoumi": "source_khanoumi"
 }
 
 def fetch_from_source(key, query):
@@ -49,6 +56,9 @@ def fetch_from_source(key, query):
         return []
 
 def smart_search(query, source_keys, output_path):
+    # ✅ اصلاح مشکل حروف عربی و فارسی (ي -> ی و ك -> ک)
+    query = query.replace('ي', 'ی').replace('ك', 'ک')
+    
     print(f"⏳ جستجوی هوشمند برای: '{query}'")
     
     words = query.lower().split()
@@ -61,25 +71,31 @@ def smart_search(query, source_keys, output_path):
             if clean_numbers:
                 number_words.append(clean_numbers)
         else:
-            if word != "mdf":
+            if word not in ["mdf", "ام", "دی", "اف"]:
                 text_words.append(word)
             
     print(f"   کلمات متنی: {text_words}")
     print(f"   اعداد (ضخامت/سایز): {number_words}")
     
-    search_term = " ".join(text_words)
+    # ✅ حذف کلمات دستوری (مثل پرفروش) از جستجو
+    effective_words = [w for w in text_words if w not in STOP_WORDS]
+    
+    search_term = " ".join(effective_words)
+    if not search_term:
+        search_term = " ".join(text_words)  # اگر همه کلمات دستوری بودند، از خود query استفاده کن
     if not search_term:
         search_term = query
         
     all_data = []
+    # ✅ تایمر ۶۰۰ ثانیه برای جلوگیری از خطای Timeout
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_source = {executor.submit(fetch_from_source, key, search_term): key for key in source_keys}
-        for future in concurrent.futures.as_completed(future_to_source, timeout=30):
+        for future in concurrent.futures.as_completed(future_to_source, timeout=600):
             try:
-                data = future.result(timeout=25)
+                data = future.result(timeout=590)
                 all_data.extend(data)
-            except:
-                pass
+            except Exception as e:
+                print(f"   ⚠️ یک منبع طول کشید یا خطا داد: {e}")
     
     if not all_data:
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -87,7 +103,8 @@ def smart_search(query, source_keys, output_path):
         print("❌ هیچ داده‌ای از منابع دریافت نشد.")
         return
 
-    blacklist = ["درب", "کابینت", "کمد", "پیوت", "کفش", "کارتن", "بسته", "عمده", "پالت", "تیراژ"]
+    # ✅ بلاک‌لیست بسیار کوتاه
+    blacklist = ["کارتن", "بسته", "عمده", "پالت", "تیراژ", "ارتباط با", "تماس با", "کارشناس"]
     
     main_category_word = ""
     for cat, keywords in CATEGORIES.items():
@@ -104,28 +121,44 @@ def smart_search(query, source_keys, output_path):
         source_name = item.get('source', '')
         source_rules = SOURCE_CONFIG.get(source_name, {"use_keyword_filter": True, "use_blacklist": True})
         
-        # --- ۱. فیلتر دسته‌بندی ---
-        is_relevant = False
+        # ✅ فیلتر دسته‌بندی بازتر
+        is_relevant = True 
         if main_category_word == "mdf":
-            mdf_keywords = ["mdf", "ام دی اف", "تخته", "ورق", "هایگلاس", "ملامینه", "چوب"]
+            mdf_keywords = ["mdf", "ام دی اف", "تخته", "ورق", "هایگلاس", "ملامینه", "چوب", "رنگی", "سفید", "خام", "صابونی", "یکرو", "دورو", "پرینتی", "نئوپان"]
             is_relevant = any(kw in product_name for kw in mdf_keywords)
         elif main_category_word == "hardware":
-            hw_keywords = ["لولا", "ریل", "دستگیره", "یراق", "آرام بند"]
+            hw_keywords = ["لولا", "ریل", "دستگیره", "یراق", "آرام بند", "گازور", "قفل", "پیچ"]
             is_relevant = any(kw in product_name for kw in hw_keywords)
         elif main_category_word == "mobile":
             mob_keywords = ["گوشی", "phone", "mobile", "samsung", "apple", "xiaomi"]
             is_relevant = any(kw in product_name for kw in mob_keywords)
         else:
-            is_relevant = any(kw.lower() in product_name for kw in query.split())
+            # ✅ فیلتر متنی هوشمند (اصلاح شده - منطق any)
+            # کلماتی که باید نادیده گرفته شوند (کلمات دستوری مثل پرفروش)
+            effective_filter_words = [w for w in text_words if w not in STOP_WORDS]
+            
+            if effective_filter_words:
+                # چک کردن اینکه حداقل یکی از کلمات کلیدی در اسم محصول هست
+                is_relevant = False
+                for kw in effective_filter_words:
+                    synonyms = expand_keywords(kw)
+                    if kw in ENG_TRANSLATIONS:
+                        synonyms.extend(ENG_TRANSLATIONS[kw])
+                    
+                    if any(syn.lower() in product_name for syn in synonyms):
+                        is_relevant = True
+                        break
+                
+                if not is_relevant:
+                    continue
 
-        if source_name == "digikala":
+        if source_name in ["digikala", "torob"]:
             is_relevant = True
 
         if not is_relevant:
             continue
             
-        # --- ۲. فیلتر اعداد (ضخامت، سایز و...) ---
-        # ساخت یک متن کامل برای جستجوی اعداد
+        # فیلتر اعداد (ضخامت، سایز و...)
         full_info = product_name
         if item.get('thickness'):
             full_info += " " + str(item['thickness']).lower()
@@ -134,7 +167,6 @@ def smart_search(query, source_keys, output_path):
             
         match_numbers = True
         for num in number_words:
-            # اگر عددی که کاربر خواسته در متن نبود، ردش کن
             if num not in full_info:
                 match_numbers = False
                 break
@@ -142,21 +174,27 @@ def smart_search(query, source_keys, output_path):
         if not match_numbers:
             continue
             
-        # --- ۳. فیلتر متنی ---
+        # ✅ فیلتر متنی فقط اگه کلمات کلیدی متمایز وجود داشته باشن
         if source_rules.get("use_keyword_filter", True):
-            match_text = True
-            for tw in text_words:
-                synonyms = expand_keywords(tw)
-                if tw in ENG_TRANSLATIONS:
-                    synonyms.extend(ENG_TRANSLATIONS[tw])
+            # کلماتی که واقعاً معنادار هستند (نه کلمات دستوری)
+            effective_filter_words = [w for w in text_words if w not in STOP_WORDS]
+            
+            if effective_filter_words:
+                match_text = False
+                for tw in effective_filter_words:
+                    synonyms = expand_keywords(tw)
+                    if tw in ENG_TRANSLATIONS:
+                        synonyms.extend(ENG_TRANSLATIONS[tw])
+                    
+                    if any(syn.lower() in product_name for syn in synonyms):
+                        match_text = True
+                        break
                 
-                if not any(syn.lower() in product_name for syn in synonyms):
-                    match_text = False
-                    break
-            if not match_text:
-                continue
+                # اگه هیچ کلمه متمایزکننده‌ای پیدا نشد، رد کن (به جز MDF)
+                if not match_text and not any(w in product_name for w in ["mdf", "ام دی اف", "تخته", "ورق"]):
+                    continue
         
-        # --- ۴. بلاک‌لیست ---
+        # فیلتر بلاک‌لیست
         if source_rules.get("use_blacklist", True):
             if any(word in product_name for word in blacklist):
                 continue
@@ -168,11 +206,13 @@ def smart_search(query, source_keys, output_path):
         filtered_results.sort(key=lambda x: x['price'])
         
         for item in filtered_results:
-            if 10_000 < item['price'] < 100_000_000:
+            # ✅ بازه قیمت بازتر
+            if 10_000 < item['price'] < 1_000_000_000:
                 results.append({
                     "source_id": "python_engine",
                     "source_name": "موتور جستجو",
                     "url": item.get('url', ''),
+                    "image": item.get('image', ''),  # ✅ فیلد عکس
                     "price": item['price'],
                     "unit": "عدد",
                     "date": "",
