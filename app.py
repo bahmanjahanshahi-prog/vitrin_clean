@@ -333,21 +333,12 @@ def format_feed(data):
     if not isinstance(data, list): return feed
     for item in data:
         if isinstance(item, dict):
-            # ✅ تولید id از url (بخش دوم) یا یک id تصادفی
-            url = item.get("url", "")
-            if url and "dkp-" in url:
-                product_id = url.split("dkp-")[-1].strip("/")
-            elif url and "/p/" in url:
-                product_id = url.split("/p/")[-1].strip("/")
-            else:
-                product_id = str(random.randint(1000, 9999))
-            
             feed.append({
-                "id": product_id,
+                "id": item.get("url", "").split("/")[-1] if item.get("url") else str(random.randint(1000, 9999)),
                 "title": item.get("note", item.get("title", item.get("name", "نامشخص"))),
                 "price": item.get("price", 0) or 0,
                 "rating": item.get("rating", 0) or 0,
-                "url": url if url else "#",
+                "url": item.get("url", "#"),
                 "image": item.get("image", ""),
                 "description": item.get("description", ""),
                 "source": item.get("source", "فروشگاه"),
@@ -405,6 +396,7 @@ def index():
 
 @app.route('/product/<product_id>')
 def product_detail(product_id):
+    # جستجو در همه فایل‌ها برای پیدا کردن محصول با این ID
     all_products = []
     for file in ["main.json", "digital.json", "building.json"]:
         data, _ = get_github_json(f"showcase_data/{file}")
