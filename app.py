@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ================== تنظیمات گیت‌هاب ==================
+# ================== تنظیمات گیت‌هاب (فقط برای رفرنس) ==================
 GITHUB_USERNAME = "bahmanjahanshahi-prog"
 GITHUB_REPO = "vitrin_clean"
 GITHUB_BRANCH = "main"
@@ -304,28 +304,20 @@ PRODUCT_TEMPLATE = BASE_TEMPLATE.replace("{% block content %}{% endblock %}", ""
 """)
 
 # ---------------------------------------------------------------
-# توابع دریافت داده از گیت‌هاب
+# توابع دریافت داده (تغییر یافته برای خواندن از لوکال)
 # ---------------------------------------------------------------
-_cache = {}
-CACHE_DURATION = 0  # ✅ کش غیرفعال شد
-
-def get_github_json(file_path):
-    now = time.time()
-    if file_path in _cache and (now - _cache[file_path]['time']) < CACHE_DURATION:
-        return _cache[file_path]['data'], None
-    
-    url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/{file_path}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}", "Accept": "application/vnd.github.v3+json"}
+def get_local_json(file_path):
+    """خواندن داده‌ها از فایل‌های لوکال به جای گیت‌هاب"""
+    full_path = os.path.join(BASE_DIR, file_path)
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            content = base64.b64decode(response.json()['content']).decode('utf-8')
-            data = json.loads(content)
-            _cache[file_path] = {'data': data, 'time': now}
-            return data, None
+        if os.path.exists(full_path):
+            with open(full_path, 'r', encoding='utf-8') as f:
+                return json.load(f), None
         else:
-            return [], f"Status Code: {response.status_code}"
+            print(f"⚠️ فایل پیدا نشد: {full_path}")
+            return [], "File not found"
     except Exception as e:
+        print(f"❌ خطا در خواندن فایل: {e}")
         return [], str(e)
 
 def format_feed(data):
@@ -333,8 +325,7 @@ def format_feed(data):
     if not isinstance(data, list): return feed
     for item in data:
         if isinstance(item, dict):
-            # ✅ استفاده از id ذخیره‌شده در فایل (اگر وجود داشت)
-            # اگر نبود، از url تولید کن
+            # ✅ استفاده از id ذخیره‌شده در فایل
             product_id = item.get("id")
             if not product_id:
                 url = item.get("url", "")
@@ -389,15 +380,16 @@ def index():
         except Exception as e:
             error = f"خطا در جستجو."
     else:
-        main_data, _ = get_github_json("showcase_data/main.json")
-        digital_data, _ = get_github_json("showcase_data/digital.json")
-        building_data, _ = get_github_json("showcase_data/building.json")
+        # ✅ خواندن از فایل‌های لوکال
+        main_data, _ = get_local_json("showcase_data/main.json")
+        digital_data, _ = get_local_json("showcase_data/digital.json")
+        building_data, _ = get_local_json("showcase_data/building.json")
 
         main_feed = format_feed(main_data)
         digital_feed = format_feed(digital_data)
         building_feed = format_feed(building_data)
 
-        # برای دیباگ
+        # دیباگ
         print(f"🔍 [DEBUG] main_feed: {len(main_feed)} محصول")
         print(f"🔍 [DEBUG] digital_feed: {len(digital_feed)} محصول")
         print(f"🔍 [DEBUG] building_feed: {len(building_feed)} محصول")
@@ -415,7 +407,7 @@ def index():
 def product_detail(product_id):
     all_products = []
     for file in ["main.json", "digital.json", "building.json"]:
-        data, _ = get_github_json(f"showcase_data/{file}")
+        data, _ = get_local_json(f"showcase_data/{file}")
         all_products.extend(format_feed(data))
 
     product = next((p for p in all_products if p['id'] == product_id), None)
