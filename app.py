@@ -307,7 +307,7 @@ PRODUCT_TEMPLATE = BASE_TEMPLATE.replace("{% block content %}{% endblock %}", ""
 # توابع دریافت داده از گیت‌هاب
 # ---------------------------------------------------------------
 _cache = {}
-CACHE_DURATION = 300
+CACHE_DURATION = 0  # ✅ کش غیرفعال شد
 
 def get_github_json(file_path):
     now = time.time()
@@ -333,8 +333,20 @@ def format_feed(data):
     if not isinstance(data, list): return feed
     for item in data:
         if isinstance(item, dict):
+            # ✅ استفاده از id ذخیره‌شده در فایل (اگر وجود داشت)
+            # اگر نبود، از url تولید کن
+            product_id = item.get("id")
+            if not product_id:
+                url = item.get("url", "")
+                if "dkp-" in url:
+                    product_id = url.split("dkp-")[-1].strip("/")
+                elif "/p/" in url:
+                    product_id = url.split("/p/")[-1].strip("/")
+                else:
+                    product_id = str(random.randint(1000, 9999))
+            
             feed.append({
-                "id": item.get("url", "").split("/")[-1] if item.get("url") else str(random.randint(1000, 9999)),
+                "id": product_id,
                 "title": item.get("note", item.get("title", item.get("name", "نامشخص"))),
                 "price": item.get("price", 0) or 0,
                 "rating": item.get("rating", 0) or 0,
@@ -385,6 +397,11 @@ def index():
         digital_feed = format_feed(digital_data)
         building_feed = format_feed(building_data)
 
+        # برای دیباگ
+        print(f"🔍 [DEBUG] main_feed: {len(main_feed)} محصول")
+        print(f"🔍 [DEBUG] digital_feed: {len(digital_feed)} محصول")
+        print(f"🔍 [DEBUG] building_feed: {len(building_feed)} محصول")
+
         if category == 'digital':
             main_feed, building_feed = [], []
         elif category == 'building':
@@ -396,7 +413,6 @@ def index():
 
 @app.route('/product/<product_id>')
 def product_detail(product_id):
-    # جستجو در همه فایل‌ها برای پیدا کردن محصول با این ID
     all_products = []
     for file in ["main.json", "digital.json", "building.json"]:
         data, _ = get_github_json(f"showcase_data/{file}")
